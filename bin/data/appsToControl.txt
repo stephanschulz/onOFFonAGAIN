@@ -1,0 +1,14 @@
+# Apps to control with scheduleDarkness
+# One app path per line
+# Lines starting with # are comments
+#
+# Examples:
+# /Applications/Spotify.app
+# /Applications/Slack.app
+# /Applications/Discord.app
+#
+# Add your apps below:
+
+
+/Applications/of_v0.12-2.0_osx_release/apps/collider/muonDetector/bin/muonDetector.app
+/Applications/of_v0.12-2.0_osx_release/apps/atmosphonia/atmosphonia_artnetTester/bin/atmosphonia_artnetTester.app
