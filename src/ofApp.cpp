@@ -2,7 +2,7 @@
 
 //--------------------------------------------------------------
 void ofApp::setup() {
-    version = "scheduleDarkness v1";
+    version = "onOFFon v1";
     ofLog() << "Starting " << version;
     
     // Grid layout: ASCII style - days as columns, time slots as rows
@@ -41,6 +41,11 @@ void ofApp::setup() {
     testMode = false;
     testSlot = getCurrentSlot();
     testDay = getCurrentDay();
+    
+    // Message area
+    noticeMessage = "";
+    noticeStartTime = 0;
+    noticeDuration = 5.0;  // Show notices for 5 seconds
     
     ofSetFrameRate(60);  // Smooth UI responsiveness
 }
@@ -171,6 +176,29 @@ string ofApp::slotToTimeString(int slot) {
 }
 
 //--------------------------------------------------------------
+bool ofApp::isAppRunning(const string& appPath) {
+    // Extract app name from path
+    string appName = appPath;
+    
+    // Remove .app extension if present
+    size_t appPos = appName.rfind(".app");
+    if (appPos != string::npos) {
+        appName = appName.substr(0, appPos);
+    }
+    
+    // Get just the app name (last component of path)
+    size_t lastSlash = appName.rfind('/');
+    if (lastSlash != string::npos) {
+        appName = appName.substr(lastSlash + 1);
+    }
+    
+    // Use pgrep to check if app is running
+    string command = "pgrep -x \"" + appName + "\" > /dev/null 2>&1";
+    int result = system(command.c_str());
+    return (result == 0);
+}
+
+//--------------------------------------------------------------
 void ofApp::openApps() {
     if (appPaths.empty()) return;
     
@@ -178,6 +206,12 @@ void ofApp::openApps() {
     for (int i = 0; i < appPaths.size(); i++) {
         string appPath = appPaths[i];
         int delay = appDelays[i];
+        
+        // Check if already running
+        if (isAppRunning(appPath)) {
+            ofLog() << "  [SKIP] " << appPath << " (already running)";
+            continue;
+        }
         
         // Build command with delay - run in background with &
         string command;
@@ -224,6 +258,53 @@ void ofApp::closeApps() {
 }
 
 //--------------------------------------------------------------
+string ofApp::findGapsInSchedule(int day) {
+    // Find gaps in the ON schedule for a given day
+    // A gap is 1-2 consecutive OFF slots surrounded by ON slots
+    
+    vector<pair<int, int>> gaps;  // pairs of (startSlot, count)
+    
+    for (int s = 1; s < NUM_SLOTS - 1; s++) {
+        // Check for 1 slot gap
+        if (!schedule[day][s] && schedule[day][s-1] && schedule[day][s+1]) {
+            gaps.push_back({s, 1});
+        }
+        // Check for 2 slot gap (1 hour)
+        else if (s < NUM_SLOTS - 2 && 
+                 !schedule[day][s] && !schedule[day][s+1] && 
+                 schedule[day][s-1] && schedule[day][s+2]) {
+            gaps.push_back({s, 2});
+            s++;  // Skip the second gap slot
+        }
+    }
+    
+    if (gaps.empty()) {
+        return "";
+    }
+    
+    // Build message
+    string msg = "NOTICE: " + dayNames[day] + " has gaps:\n";
+    for (auto& gap : gaps) {
+        string startTime = slotToTimeString(gap.first);
+        string endTime = slotToTimeString(gap.first + gap.second);
+        int minutes = gap.second * 30;
+        msg += "  " + startTime + "-" + endTime + " (" + ofToString(minutes) + "min gap)\n";
+    }
+    msg += "Intentional?";
+    
+    return msg;
+}
+
+//--------------------------------------------------------------
+void ofApp::checkForGaps(int day) {
+    string gapMsg = findGapsInSchedule(day);
+    if (!gapMsg.empty()) {
+        noticeMessage = gapMsg;
+        noticeStartTime = ofGetElapsedTimef();
+    }
+}
+
+//--------------------------------------------------------------
 void ofApp::update() {
     int currentDay = getCurrentDay();
     int currentSlot = getCurrentSlot();
@@ -244,6 +325,11 @@ void ofApp::update() {
         } else if (!shouldBeActive && appsCurrentlyRunning) {
             closeApps();
         }
+    }
+    
+    // Clear notice after duration
+    if (!noticeMessage.empty() && (ofGetElapsedTimef() - noticeStartTime) > noticeDuration) {
+        noticeMessage = "";
     }
 }
 
@@ -345,6 +431,31 @@ void ofApp::drawGrid() {
         }
         string delayStr = "[" + ofToString(appDelays[i]) + "s] ";
         ofDrawBitmapString("  " + delayStr + appName, 5, statusY + 54 + i * 14);
+    }
+    
+    // Draw notice message on the right side
+    if (!noticeMessage.empty()) {
+        // Calculate position - right side of grid
+        float msgX = 5 + 9 * 8 + (NUM_DAYS * cellWidth) + 30;
+        float msgY = gridStartY + 60;
+        
+        // Fade out effect
+        float elapsed = ofGetElapsedTimef() - noticeStartTime;
+        float alpha = 255;
+        if (elapsed > noticeDuration - 1.0) {
+            alpha = 255 * (noticeDuration - elapsed);
+        }
+        
+        // Yellow/orange warning color
+        ofSetColor(255, 200, 50, (int)alpha);
+        
+        // Draw multiline message
+        vector<string> lines = ofSplitString(noticeMessage, "\n");
+        for (int i = 0; i < lines.size(); i++) {
+            ofDrawBitmapString(lines[i], msgX, msgY + i * 16);
+        }
+        
+        ofSetColor(200);  // Reset color
     }
 }
 
@@ -485,6 +596,12 @@ void ofApp::mousePressed(int x, int y, int button) {
 void ofApp::mouseReleased(int x, int y, int button) {
     // Save when done clicking/dragging
     saveSchedule();
+    
+    // Check for gaps if we were painting ON values
+    if (lastDragDay >= 0 && dragPaintValue) {
+        checkForGaps(lastDragDay);
+    }
+    
     lastDragDay = -1;
     lastDragSlot = -1;
 }

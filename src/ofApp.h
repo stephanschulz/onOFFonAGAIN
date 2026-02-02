@@ -43,6 +43,7 @@ public:
     // App control
     void openApps();
     void closeApps();
+    bool isAppRunning(const string& appPath);
     
     // Grid drawing
     void drawGrid();
@@ -75,4 +76,13 @@ public:
     bool testMode;
     int testSlot;
     int testDay;
+    
+    // Message area (right side)
+    string noticeMessage;
+    float noticeStartTime;
+    float noticeDuration;
+    
+    // Gap detection
+    void checkForGaps(int day);
+    string findGapsInSchedule(int day);
 };
