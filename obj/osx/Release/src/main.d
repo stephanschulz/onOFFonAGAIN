@@ -1,5 +1,5 @@
 obj/osx/Release/src/main.o: \
-  /Applications/of_v0.12-2.0_osx_release/apps/scheduleDarkness/scheduleDarkness/src/main.cpp \
+  /Applications/of_v0.12-2.0_osx_release/apps/onOFFon/onOFFon/src/main.cpp \
   ../../../libs/openFrameworks/ofMain.h \
   ../../../libs/openFrameworks/utils/ofConstants.h \
   ../../../libs/glew/include/GL/glew.h \
@@ -386,7 +386,7 @@ obj/osx/Release/src/main.o: \
   ../../../libs/openFrameworks/3d/of3dUtils.h \
   ../../../libs/openFrameworks/3d/ofCamera.h \
   ../../../libs/openFrameworks/3d/ofEasyCam.h \
-  /Applications/of_v0.12-2.0_osx_release/apps/scheduleDarkness/scheduleDarkness/src/ofApp.h \
+  /Applications/of_v0.12-2.0_osx_release/apps/onOFFon/onOFFon/src/ofApp.h \
   ../../../libs/glfw/include/GLFW/glfw3.h
 
 ../../../libs/openFrameworks/ofMain.h:
@@ -1161,6 +1161,6 @@ obj/osx/Release/src/main.o: \
 
 ../../../libs/openFrameworks/3d/ofEasyCam.h:
 
-/Applications/of_v0.12-2.0_osx_release/apps/scheduleDarkness/scheduleDarkness/src/ofApp.h:
+/Applications/of_v0.12-2.0_osx_release/apps/onOFFon/onOFFon/src/ofApp.h:
 
 ../../../libs/glfw/include/GLFW/glfw3.h:

@@ -1,8 +1,19 @@
 #include "ofApp.h"
 
+// Include auto-generated version header (created at build time)
+#ifdef __has_include
+#if __has_include("version.h")
+#include "version.h"
+#endif
+#endif
+
+#ifndef VERSION_STRING
+#define VERSION_STRING "onOFFon dev-build"
+#endif
+
 //--------------------------------------------------------------
 void ofApp::setup() {
-    version = "onOFFon v1";
+    version = VERSION_STRING;
     ofLog() << "Starting " << version;
     
     // Grid layout: ASCII style - days as columns, time slots as rows
@@ -13,9 +24,11 @@ void ofApp::setup() {
     cellWidth = 5 * 8;    // " [#] " = 5 chars = 40 pixels (centered with spaces)
     cellHeight = 17;      // Line height + 3 extra pixels spacing
     
-    // Set window size (1.5x wider)
-    int windowWidth = (5 + labelWidth + 8 + (NUM_DAYS * cellWidth) + 100) * 1.5;
-    int windowHeight = gridStartY + 12 + (NUM_SLOTS * cellHeight) + 150;  // Extra for multi-line status + app list
+    // Set window size - status panel is to the right of grid
+    int gridWidth = 5 + labelWidth + 8 + (NUM_DAYS * cellWidth) + 80;  // Grid area
+    int statusPanelWidth = 350;  // Space for status text on the right
+    int windowWidth = gridWidth + statusPanelWidth;
+    int windowHeight = gridStartY + 12 + (NUM_SLOTS * cellHeight) + 20;  // Just grid height + small margin
     ofSetWindowShape(windowWidth, windowHeight);
     ofSetWindowTitle(version);
     
@@ -340,9 +353,8 @@ void ofApp::drawGrid() {
     
     ofSetColor(200);  // Light gray for all text
     
-    // Draw title
-    ofDrawBitmapString(version, 10, 20);
-    ofDrawBitmapString("Click cells to toggle: [#]=RUN  [ ]=CLOSED", 10, 38);
+    // Draw instructions
+    ofDrawBitmapString("Click cells to toggle: [#]=RUN  [ ]=CLOSED", 10, 20);
     
     // Build header line with day names (aligned with cells)
     // Time column is "00:00 " (6 chars) + "   " (3 chars) = 9 chars before cells
@@ -401,25 +413,27 @@ void ofApp::drawGrid() {
         ofDrawBitmapString(line, 5, y);
     }
     
-    // Draw status on multiple lines
-    float statusY = gridStartY + 20 + NUM_SLOTS * cellHeight + 20;
+    // Draw status to the right of the grid
+    float statusX = 5 + 9 * 8 + (NUM_DAYS * cellWidth) + 30;
+    float statusY = gridStartY + 20;
     bool currentActive = schedule[currentDay][currentSlot];
     
     string timeLabel = "Current: " + dayNames[currentDay] + " " + slotToTimeString(currentSlot);
+    ofDrawBitmapString(timeLabel, statusX, statusY);
+    
     if (testMode) {
-        timeLabel += "  [TEST MODE - arrows to change, 't' to exit]";
+        ofDrawBitmapString("[TEST MODE - arrows to change, 't' to exit]", statusX, statusY + 18);
     }
-    ofDrawBitmapString(timeLabel, 5, statusY);
     
     string statusText;
     if (currentActive) {
-        statusText = "Status:  ACTIVE (apps running)";
+        statusText = "Status: ACTIVE (apps running)";
     } else {
-        statusText = "Status:  DARKNESS (apps closed)";
+        statusText = "Status: DARKNESS (apps closed)";
     }
-    ofDrawBitmapString(statusText, 5, statusY + 18);
+    ofDrawBitmapString(statusText, statusX, statusY + 36);
     
-    ofDrawBitmapString("Apps controlled (" + ofToString(appPaths.size()) + "):", 5, statusY + 36);
+    ofDrawBitmapString("Apps controlled (" + ofToString(appPaths.size()) + "):", statusX, statusY + 60);
     
     // List each app with delay
     for (int i = 0; i < appPaths.size(); i++) {
@@ -430,14 +444,13 @@ void ofApp::drawGrid() {
             appName = appName.substr(lastSlash + 1);
         }
         string delayStr = "[" + ofToString(appDelays[i]) + "s] ";
-        ofDrawBitmapString("  " + delayStr + appName, 5, statusY + 54 + i * 14);
+        ofDrawBitmapString("  " + delayStr + appName, statusX, statusY + 78 + i * 14);
     }
     
-    // Draw notice message on the right side
+    // Draw notice message below the status
     if (!noticeMessage.empty()) {
-        // Calculate position - right side of grid
-        float msgX = 5 + 9 * 8 + (NUM_DAYS * cellWidth) + 30;
-        float msgY = gridStartY + 60;
+        float msgX = statusX;
+        float msgY = statusY + 78 + appPaths.size() * 14 + 30;
         
         // Fade out effect
         float elapsed = ofGetElapsedTimef() - noticeStartTime;
@@ -484,6 +497,12 @@ int ofApp::getCellSlot(int x, int y) {
 void ofApp::draw() {
     ofBackground(0);  // Black background for ASCII art style
     drawGrid();
+    
+    // Version number bottom right (grey on black)
+    ofSetColor(100);  // Dark grey
+    float versionX = ofGetWidth() - version.length() * 8 - 10;
+    float versionY = ofGetHeight() - 10;
+    ofDrawBitmapString(version, versionX, versionY);
 }
 
 //--------------------------------------------------------------
