@@ -27,6 +27,7 @@ public:
 
     // App control
     vector<string> appPaths;
+    vector<int> appDelays;  // Delay in seconds before launching each app
     bool appsCurrentlyRunning;
     
     // Schedule file I/O
@@ -69,4 +70,9 @@ public:
     bool dragPaintValue;
     int lastDragDay;
     int lastDragSlot;
+    
+    // Test mode - override current time for testing
+    bool testMode;
+    int testSlot;
+    int testDay;
 };

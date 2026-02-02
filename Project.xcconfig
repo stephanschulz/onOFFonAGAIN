@@ -20,14 +20,13 @@ CODE_SIGN_IDENTITY = -
 INFOPLIST_FILE = openFrameworks-Info.plist
 
 //ICONS - NEW IN 0072 
-//ICON_NAME = icon.icns
+ICON_NAME = icon.icns
 //ICON_NAME[config=Debug] = icon-debug.icns
-ICON_NAME = of.icns
+//ICON_NAME = of.icns
 ICON_NAME[config=Debug] = of_debug.icns
 //ICON_FILE = $(OF_PATH)/libs/openFrameworksCompiled/project/osx/$(ICON_NAME)
 //IF YOU WANT AN APP TO HAVE A CUSTOM ICON - PUT THEM IN YOUR DATA FOLDER AND CHANGE ICON_FILE_PATH to:
-//ICON_FILE_PATH = bin/data/$(ICON_NAME)
-ICON_FILE = /Applications/of_v0.12-2.0_osx_release/apps/delayOpen/delayOpen_v6/bin/data/icon.icns
+ICON_FILE = bin/data/$(ICON_NAME)
 //FOR AV ENGINE SOUND PLAYER UNCOMMENT TWO LINES BELOW
 //OF_NO_FMOD=1
 //USER_PREPROCESSOR_DEFINITIONS="OF_NO_FMOD=1"

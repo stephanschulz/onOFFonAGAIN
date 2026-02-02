@@ -1,14 +1,15 @@
 # Apps to control with scheduleDarkness
-# One app path per line
+# Format: delay, /path/to/app.app
+# delay = seconds to wait before launching (for staggered startup)
 # Lines starting with # are comments
 #
 # Examples:
-# /Applications/Spotify.app
-# /Applications/Slack.app
-# /Applications/Discord.app
+# 0, /Applications/Spotify.app
+# 5, /Applications/Slack.app
+# 10, /Applications/Discord.app
 #
 # Add your apps below:
 
 
-/Applications/of_v0.12-2.0_osx_release/apps/collider/muonDetector/bin/muonDetector.app
-/Applications/of_v0.12-2.0_osx_release/apps/atmosphonia/atmosphonia_artnetTester/bin/atmosphonia_artnetTester.app
+1, /Applications/of_v0.12-2.0_osx_release/apps/collider/muonDetector/bin/muonDetector.app
+12, /Applications/of_v0.12-2.0_osx_release/apps/atmosphonia/atmosphonia_artnetTester/bin/atmosphonia_artnetTester.app

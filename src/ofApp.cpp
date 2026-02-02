@@ -37,6 +37,11 @@ void ofApp::setup() {
     lastCheckedSlot = -1;
     lastCheckedDay = -1;
     
+    // Test mode - start disabled, use real time
+    testMode = false;
+    testSlot = getCurrentSlot();
+    testDay = getCurrentDay();
+    
     ofSetFrameRate(60);  // Smooth UI responsiveness
 }
 
@@ -87,6 +92,7 @@ void ofApp::saveSchedule() {
 //--------------------------------------------------------------
 void ofApp::loadAppList() {
     appPaths.clear();
+    appDelays.clear();
     
     string path = ofToDataPath("appsToControl.txt");
     ofFile file(path);
@@ -101,8 +107,24 @@ void ofApp::loadAppList() {
             trimmed.erase(trimmed.find_last_not_of(" \t\n\r") + 1);
             
             if (trimmed.length() > 0 && trimmed[0] != '#') {
-                appPaths.push_back(trimmed);
-                ofLog() << "App to control: " << trimmed;
+                // Parse format: "delay, /path/to/app" or just "/path/to/app"
+                int delay = 0;
+                string appPath = trimmed;
+                
+                size_t commaPos = trimmed.find(',');
+                if (commaPos != string::npos) {
+                    // Has delay prefix
+                    string delayStr = trimmed.substr(0, commaPos);
+                    delay = ofToInt(delayStr);
+                    appPath = trimmed.substr(commaPos + 1);
+                    // Trim whitespace from path
+                    appPath.erase(0, appPath.find_first_not_of(" \t"));
+                    appPath.erase(appPath.find_last_not_of(" \t\n\r") + 1);
+                }
+                
+                appPaths.push_back(appPath);
+                appDelays.push_back(delay);
+                ofLog() << "App to control: " << appPath << " (delay: " << delay << "s)";
             }
         }
         ofLog() << "Loaded " << appPaths.size() << " apps from " << path;
@@ -113,6 +135,10 @@ void ofApp::loadAppList() {
 
 //--------------------------------------------------------------
 int ofApp::getCurrentDay() {
+    // Return test day if in test mode
+    if (testMode) {
+        return testDay;
+    }
     // Get current day of week (0=Mon, 6=Sun)
     time_t now = time(0);
     tm* ltm = localtime(&now);
@@ -123,6 +149,10 @@ int ofApp::getCurrentDay() {
 
 //--------------------------------------------------------------
 int ofApp::getCurrentSlot() {
+    // Return test slot if in test mode
+    if (testMode) {
+        return testSlot;
+    }
     // Get current 30-min slot (0-47)
     time_t now = time(0);
     tm* ltm = localtime(&now);
@@ -144,10 +174,21 @@ string ofApp::slotToTimeString(int slot) {
 void ofApp::openApps() {
     if (appPaths.empty()) return;
     
-    ofLog() << "Opening apps...";
-    for (auto& appPath : appPaths) {
-        string command = "open \"" + appPath + "\"";
-        ofLog() << "  " << command;
+    ofLog() << "Opening apps (with staggered delays)...";
+    for (int i = 0; i < appPaths.size(); i++) {
+        string appPath = appPaths[i];
+        int delay = appDelays[i];
+        
+        // Build command with delay - run in background with &
+        string command;
+        if (delay > 0) {
+            // Sleep then open, all in background
+            command = "(sleep " + ofToString(delay) + " && open \"" + appPath + "\") &";
+        } else {
+            command = "open \"" + appPath + "\"";
+        }
+        
+        ofLog() << "  [" << delay << "s] " << appPath;
         system(command.c_str());
     }
     appsCurrentlyRunning = true;
@@ -227,7 +268,7 @@ void ofApp::drawGrid() {
     ofDrawBitmapString(header, 5, gridStartY - 8);
     
     // Draw underline for current day
-    string underline = "         ";  // 9 spaces
+    string underline = "        ";  // 8 spaces
     for (int d = 0; d < NUM_DAYS; d++) {
         if (d == currentDay) {
             underline += " ^^^ ";  // Mark current day (5 chars)
@@ -278,7 +319,11 @@ void ofApp::drawGrid() {
     float statusY = gridStartY + 20 + NUM_SLOTS * cellHeight + 20;
     bool currentActive = schedule[currentDay][currentSlot];
     
-    ofDrawBitmapString("Current: " + dayNames[currentDay] + " " + slotToTimeString(currentSlot), 5, statusY);
+    string timeLabel = "Current: " + dayNames[currentDay] + " " + slotToTimeString(currentSlot);
+    if (testMode) {
+        timeLabel += "  [TEST MODE - arrows to change, 't' to exit]";
+    }
+    ofDrawBitmapString(timeLabel, 5, statusY);
     
     string statusText;
     if (currentActive) {
@@ -290,7 +335,7 @@ void ofApp::drawGrid() {
     
     ofDrawBitmapString("Apps controlled (" + ofToString(appPaths.size()) + "):", 5, statusY + 36);
     
-    // List each app
+    // List each app with delay
     for (int i = 0; i < appPaths.size(); i++) {
         // Extract just the app name from the path
         string appName = appPaths[i];
@@ -298,7 +343,8 @@ void ofApp::drawGrid() {
         if (lastSlash != string::npos) {
             appName = appName.substr(lastSlash + 1);
         }
-        ofDrawBitmapString("  - " + appName, 5, statusY + 54 + i * 14);
+        string delayStr = "[" + ofToString(appDelays[i]) + "s] ";
+        ofDrawBitmapString("  " + delayStr + appName, 5, statusY + 54 + i * 14);
     }
 }
 
@@ -341,6 +387,55 @@ void ofApp::keyPressed(int key) {
         openApps();
     } else if (key == 'c') {
         closeApps();
+    } else if (key == 't') {
+        // Toggle test mode
+        testMode = !testMode;
+        if (testMode) {
+            // Initialize test time to current real time
+            time_t now = time(0);
+            tm* ltm = localtime(&now);
+            int dow = ltm->tm_wday;
+            testDay = (dow == 0) ? 6 : dow - 1;
+            testSlot = ltm->tm_hour * 2 + (ltm->tm_min >= 30 ? 1 : 0);
+            ofLog() << "TEST MODE ON - Use arrow keys to change time";
+        } else {
+            ofLog() << "TEST MODE OFF - Using real time";
+            // Reset state so it re-evaluates with real time
+            lastCheckedSlot = -1;
+            lastCheckedDay = -1;
+        }
+    } else if (key == OF_KEY_UP) {
+        // Move time slot earlier
+        if (testMode) {
+            testSlot--;
+            if (testSlot < 0) testSlot = NUM_SLOTS - 1;
+            lastCheckedSlot = -1;  // Force re-check
+            ofLog() << "Test time: " << dayNames[testDay] << " " << slotToTimeString(testSlot);
+        }
+    } else if (key == OF_KEY_DOWN) {
+        // Move time slot later
+        if (testMode) {
+            testSlot++;
+            if (testSlot >= NUM_SLOTS) testSlot = 0;
+            lastCheckedSlot = -1;  // Force re-check
+            ofLog() << "Test time: " << dayNames[testDay] << " " << slotToTimeString(testSlot);
+        }
+    } else if (key == OF_KEY_LEFT) {
+        // Move to previous day
+        if (testMode) {
+            testDay--;
+            if (testDay < 0) testDay = NUM_DAYS - 1;
+            lastCheckedDay = -1;  // Force re-check
+            ofLog() << "Test time: " << dayNames[testDay] << " " << slotToTimeString(testSlot);
+        }
+    } else if (key == OF_KEY_RIGHT) {
+        // Move to next day
+        if (testMode) {
+            testDay++;
+            if (testDay >= NUM_DAYS) testDay = 0;
+            lastCheckedDay = -1;  // Force re-check
+            ofLog() << "Test time: " << dayNames[testDay] << " " << slotToTimeString(testSlot);
+        }
     }
 }
 
