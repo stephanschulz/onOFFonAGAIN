@@ -19,11 +19,11 @@
                         "ignoreFailures": true
                     }
                 ],
-                "program": "${workspaceRoot}/bin/${workspaceFolderBasename}_debug"
+                "program": "${workspaceRoot}/bin/onOFFonAGAIN_debug"
             },
             "osx": {
                 "MIMode": "lldb",
-                "program": "${workspaceRoot}/bin/${workspaceFolderBasename}_debug.app/Contents/MacOS/${workspaceFolderBasename}_debug"
+                "program": "${workspaceRoot}/bin/onOFFonAGAIN_debug.app/Contents/MacOS/onOFFonAGAIN_debug"
             },
             "windows": {
                 "MIMode": "gdb",
@@ -35,7 +35,7 @@
                         "ignoreFailures": true
                     }
                 ],
-                "program": "${workspaceRoot}/bin/${workspaceFolderBasename}_debug"
+                "program": "${workspaceRoot}/bin/onOFFonAGAIN_debug"
             }
         },
         {

@@ -30,7 +30,7 @@ void ofApp::setup() {
     int windowWidth = gridWidth + statusPanelWidth;
     int windowHeight = gridStartY + 12 + (NUM_SLOTS * cellHeight) + 20;  // Just grid height + small margin
     ofSetWindowShape(windowWidth, windowHeight);
-    ofSetWindowTitle(version);
+    ofSetWindowTitle("onOFFonAGAIN");
     
     // Initialize schedule to all inactive (apps closed by default)
     for (int d = 0; d < NUM_DAYS; d++) {

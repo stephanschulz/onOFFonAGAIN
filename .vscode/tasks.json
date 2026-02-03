@@ -11,7 +11,7 @@
                 "reveal": "always",
                 "panel": "shared"
             },
-            "command": "rm -rf bin/colliderCanopy.app && make -j -s 2>&1 && cp -f icon.icns bin/colliderCanopy.app/Contents/Resources/ 2>/dev/null && /usr/libexec/PlistBuddy -c 'Set :CFBundleIconFile icon.icns' bin/colliderCanopy.app/Contents/Info.plist 2>/dev/null || true && make RunRelease",
+            "command": "rm -rf bin/onOFFonAGAIN.app && make clean && make -j -s 2>&1 && cp -f bin/data/icon.icns bin/onOFFonAGAIN.app/Contents/Resources/icon.icns && /usr/libexec/PlistBuddy -c 'Set :CFBundleIconFile icon.icns' bin/onOFFonAGAIN.app/Contents/Info.plist && make RunRelease",
             "group": {
                 "kind": "build",
                 "isDefault": true
