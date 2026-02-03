@@ -61,6 +61,11 @@ void ofApp::setup() {
     noticeStartTime = 0;
     noticeDuration = 5.0;  // Show notices for 5 seconds
     
+    // Sequential launch with progress bars
+    launchingApps = false;
+    launchIndex = 0;
+    launchStartTime = 0;
+    
     ofSetFrameRate(60);  // Smooth UI responsiveness
 }
 
@@ -216,30 +221,11 @@ bool ofApp::isAppRunning(const string& appPath) {
 void ofApp::openApps() {
     if (appPaths.empty()) return;
     
-    ofLog() << "Opening apps (with staggered delays)...";
-    for (int i = 0; i < appPaths.size(); i++) {
-        string appPath = appPaths[i];
-        int delay = appDelays[i];
-        
-        // Check if already running
-        if (isAppRunning(appPath)) {
-            ofLog() << "  [SKIP] " << appPath << " (already running)";
-            continue;
-        }
-        
-        // Build command with delay - run in background with &
-        string command;
-        if (delay > 0) {
-            // Sleep then open, all in background
-            command = "(sleep " + ofToString(delay) + " && open \"" + appPath + "\") &";
-        } else {
-            command = "open \"" + appPath + "\"";
-        }
-        
-        ofLog() << "  [" << delay << "s] " << appPath;
-        system(command.c_str());
-    }
-    appsCurrentlyRunning = true;
+    // Start sequential launch so we can show progress bars for each app's delay
+    ofLog() << "Starting apps (with progress bars for each delay)...";
+    launchingApps = true;
+    launchIndex = 0;
+    launchStartTime = ofGetElapsedTimef();
 }
 
 //--------------------------------------------------------------
@@ -320,24 +306,47 @@ void ofApp::checkForGaps(int day) {
 
 //--------------------------------------------------------------
 void ofApp::update() {
-    int currentDay = getCurrentDay();
-    int currentSlot = getCurrentSlot();
-    
-    // Only check when slot or day changes
-    if (currentSlot != lastCheckedSlot || currentDay != lastCheckedDay) {
-        lastCheckedSlot = currentSlot;
-        lastCheckedDay = currentDay;
+    // Tick sequential launch: when delay for current app elapsed, open it and advance
+    if (launchingApps && launchIndex < (int)appPaths.size()) {
+        float elapsed = ofGetElapsedTimef() - launchStartTime;
+        int delay = appDelays[launchIndex];
+        if (elapsed >= (float)delay) {
+            string appPath = appPaths[launchIndex];
+            if (!isAppRunning(appPath)) {
+                string command = "open \"" + appPath + "\"";
+                ofLog() << "  [" << delay << "s] Opening " << appPath;
+                system(command.c_str());
+            }
+            launchIndex++;
+            if (launchIndex >= (int)appPaths.size()) {
+                launchingApps = false;
+                appsCurrentlyRunning = true;
+                ofLog() << "All apps started.";
+            } else {
+                launchStartTime = ofGetElapsedTimef();
+            }
+        }
+        // else: still counting down for current app (progress bar drawn in draw)
+    } else {
+        // Normal schedule check when slot or day changes
+        int currentDay = getCurrentDay();
+        int currentSlot = getCurrentSlot();
         
-        bool shouldBeActive = schedule[currentDay][currentSlot];
-        
-        ofLog() << dayNames[currentDay] << " " << slotToTimeString(currentSlot) 
-                << " - Slot active: " << (shouldBeActive ? "YES" : "NO")
-                << " - Apps running: " << (appsCurrentlyRunning ? "YES" : "NO");
-        
-        if (shouldBeActive && !appsCurrentlyRunning) {
-            openApps();
-        } else if (!shouldBeActive && appsCurrentlyRunning) {
-            closeApps();
+        if (currentSlot != lastCheckedSlot || currentDay != lastCheckedDay) {
+            lastCheckedSlot = currentSlot;
+            lastCheckedDay = currentDay;
+            
+            bool shouldBeActive = schedule[currentDay][currentSlot];
+            
+            ofLog() << dayNames[currentDay] << " " << slotToTimeString(currentSlot) 
+                    << " - Slot active: " << (shouldBeActive ? "YES" : "NO")
+                    << " - Apps running: " << (appsCurrentlyRunning ? "YES" : "NO");
+            
+            if (shouldBeActive && !appsCurrentlyRunning && !launchingApps) {
+                openApps();
+            } else if (!shouldBeActive && appsCurrentlyRunning) {
+                closeApps();
+            }
         }
     }
     
@@ -436,22 +445,56 @@ void ofApp::drawGrid() {
     
     ofDrawBitmapString("Apps controlled (" + ofToString(appPaths.size()) + "):", statusX, statusY + 60);
     
-    // List each app with delay
-    for (int i = 0; i < appPaths.size(); i++) {
-        // Extract just the app name from the path
+    // Progress bars for each app (like delayOpen_v6): show delay countdown when launching
+    const float barWidth = 120;
+    const float barHeight = 10;
+    const float rowHeight = 22;
+    float rowY = statusY + 76;
+    
+    for (int i = 0; i < (int)appPaths.size(); i++) {
         string appName = appPaths[i];
         size_t lastSlash = appName.rfind('/');
         if (lastSlash != string::npos) {
             appName = appName.substr(lastSlash + 1);
         }
-        string delayStr = "[" + ofToString(appDelays[i]) + "s] ";
-        ofDrawBitmapString("  " + delayStr + appName, statusX, statusY + 78 + i * 14);
+        
+        float y = rowY + i * rowHeight;
+        ofSetColor(200);
+        ofDrawBitmapString("[" + ofToString(appDelays[i]) + "s] " + appName, statusX, y);
+        
+        // Bar background (grey)
+        float barX = statusX;
+        float barY = y + 2;
+        ofSetColor(80);
+        ofDrawRectangle(barX, barY, barWidth, barHeight);
+        
+        if (launchingApps) {
+            if (i < launchIndex) {
+                // Already started: full bar (green)
+                ofSetColor(0, 180, 0);
+                ofDrawRectangle(barX, barY, barWidth, barHeight);
+            } else if (i == launchIndex) {
+                // Current: countdown bar (drains as time runs out)
+                float elapsed = ofGetElapsedTimef() - launchStartTime;
+                float remaining = (float)appDelays[i] - elapsed;
+                float progress = (appDelays[i] > 0) ? ofClamp(remaining / (float)appDelays[i], 0, 1) : 0;
+                ofSetColor(100, 200, 255);
+                ofDrawRectangle(barX, barY, barWidth * progress, barHeight);
+            }
+            // i > launchIndex: empty bar (stays grey)
+        } else if (appsCurrentlyRunning) {
+            // Not launching: all bars full (apps running)
+            ofSetColor(0, 180, 0);
+            ofDrawRectangle(barX, barY, barWidth, barHeight);
+        }
     }
+    
+    ofSetColor(200);  // reset for text below
     
     // Draw notice message below the status
     if (!noticeMessage.empty()) {
         float msgX = statusX;
-        float msgY = statusY + 78 + appPaths.size() * 14 + 30;
+        float msgY = statusY + 76 + appPaths.size() * rowHeight + 20;
         
         // Fade out effect
         float elapsed = ofGetElapsedTimef() - noticeStartTime;

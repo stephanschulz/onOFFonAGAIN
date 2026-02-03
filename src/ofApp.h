@@ -30,6 +30,11 @@ public:
     vector<int> appDelays;  // Delay in seconds before launching each app
     bool appsCurrentlyRunning;
     
+    // Sequential launch with progress bars (like delayOpen_v6)
+    bool launchingApps;     // true while counting down and opening apps one by one
+    int launchIndex;        // which app we're currently counting down for
+    float launchStartTime;  // when we started the countdown for current app
+    
     // Schedule file I/O
     void loadSchedule();
     void saveSchedule();
