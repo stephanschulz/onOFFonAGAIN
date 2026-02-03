@@ -45,8 +45,9 @@ void ofApp::setup() {
     // Load app list
     loadAppList();
     
-    // Initialize state
-    appsCurrentlyRunning = true;  // Assume apps are running at start
+    // Initialize state - don't assume apps are running; update() will start them
+    // if current time matches an active slot (using delays from appsToControl.txt)
+    appsCurrentlyRunning = false;
     lastCheckedSlot = -1;
     lastCheckedDay = -1;
     
